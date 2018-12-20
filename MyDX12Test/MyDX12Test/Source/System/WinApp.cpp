@@ -3,12 +3,12 @@
 
 HWND WinApp::m_hwnd = nullptr;
 
-int WinApp::Run(/*DXSample* pSample, */HINSTANCE hInstance, int nCmdShow)
+int WinApp::Run(DXTestBase* pSample, HINSTANCE hInstance, int nCmdShow)
 {
 	// コマンドライン引数取得
 	int argc;
 	LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-	//pSample->ParseCommandLineArgs(argv, argc);
+	pSample->ParseCommandLineArgs(argv, argc);
 	LocalFree(argv);
 
 	// ウィンドウクラス構造体の設定
@@ -33,15 +33,13 @@ int WinApp::Run(/*DXSample* pSample, */HINSTANCE hInstance, int nCmdShow)
 	}
 
 	// ウィンドウサイズ設定
-	//RECT windowRect = { 0, 0, static_cast<LONG>(pSample->GetWidth()), static_cast<LONG>(pSample->GetHeight()) };
-	RECT windowRect = { 0, 0, 1280, 720 };
+	RECT windowRect = { 0, 0, static_cast<LONG>(pSample->GetWidth()), static_cast<LONG>(pSample->GetHeight()) };
 	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);	// ウィンドウの枠部分を考慮したサイズを計算
 
 	// ウィンドウの生成
 	m_hwnd = CreateWindow(
 		windowClass.lpszClassName,				// 登録されているクラス名
-		//pSample->GetTitle(),					// ウィンドウ名
-		L"DX12Test",
+		pSample->GetTitle(),					// ウィンドウ名
 		WS_OVERLAPPEDWINDOW,					// ウィンドウスタイル
 		CW_USEDEFAULT,							// ウィンドウ横方向の位置
 		CW_USEDEFAULT,							// ウィンドウ縦方向の位置
@@ -50,8 +48,7 @@ int WinApp::Run(/*DXSample* pSample, */HINSTANCE hInstance, int nCmdShow)
 		nullptr,								// 親、オーナーウィンドウのハンドル
 		nullptr,								// メニュー、子ウィンドウのハンドル
 		hInstance,								// アプリケーションインスタンスのハンドル
-		//pSample);								// ウィンドウ作成データ
-		nullptr);								
+		pSample);								// ウィンドウ作成データ
 
 	if (m_hwnd == NULL) 
 	{
@@ -60,7 +57,7 @@ int WinApp::Run(/*DXSample* pSample, */HINSTANCE hInstance, int nCmdShow)
 	}
 
 	// Initialize the sample. OnInit is defined in each child-implementation of DXSample.
-	//pSample->OnInit();
+	pSample->OnInit();
 
 	// ウィンドウの表示
 	ShowWindow(m_hwnd, nCmdShow);
@@ -77,7 +74,7 @@ int WinApp::Run(/*DXSample* pSample, */HINSTANCE hInstance, int nCmdShow)
 		}
 	}
 
-	//pSample->OnDestroy();
+	pSample->OnDestroy();
 
 	// Return this part of the WM_QUIT message to Windows.
 	return static_cast<char>(msg.wParam);
@@ -86,7 +83,7 @@ int WinApp::Run(/*DXSample* pSample, */HINSTANCE hInstance, int nCmdShow)
 // Main message handler for the sample.
 LRESULT CALLBACK WinApp::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	//DXSample* pSample = reinterpret_cast<DXSample*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+	DXTestBase* pSample = reinterpret_cast<DXTestBase*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
 	switch (message)
 	{
@@ -99,27 +96,27 @@ LRESULT CALLBACK WinApp::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	return 0;
 
 	case WM_KEYDOWN:
-		//if (pSample)
-		//{
-		//	pSample->OnKeyDown(static_cast<UINT8>(wParam));
-		//}
+		if (pSample)
+		{
+			pSample->OnKeyDown(static_cast<UINT8>(wParam));
+		}
 
 		// テストメッセージボックス
 		return 0;
 
 	case WM_KEYUP:
-		//if (pSample)
-		//{
-		//	pSample->OnKeyUp(static_cast<UINT8>(wParam));
-		//}
+		if (pSample)
+		{
+			pSample->OnKeyUp(static_cast<UINT8>(wParam));
+		}
 		return 0;
 
 	case WM_PAINT:
-		//if (pSample)
-		//{
-		//	pSample->OnUpdate();
-		//	pSample->OnRender();
-		//}
+		if (pSample)
+		{
+			pSample->OnUpdate();
+			pSample->OnRender();
+		}
 		return 0;
 
 	case WM_DESTROY:

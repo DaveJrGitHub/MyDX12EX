@@ -2,11 +2,13 @@
 
 #include "../DX/DXTestBase.h"
 
+class DXTestBase;
+
 // ウィンドウズアプリケーションメイン
 class WinApp
 {
 public:
-	static int Run(/*DXSample* pSample, */HINSTANCE hInstance, int nCmdShow);
+	static int Run(DXTestBase* pSample, HINSTANCE hInstance, int nCmdShow);
 	static HWND GetHwnd() { return m_hwnd; }
 
 protected:
