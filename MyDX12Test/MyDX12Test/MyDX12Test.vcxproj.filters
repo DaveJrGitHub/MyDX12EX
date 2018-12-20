@@ -25,6 +25,9 @@
     <Filter Include="ヘッダー ファイル\DX">
       <UniqueIdentifier>{798c3d4f-fb73-4ce3-823e-124219475b18}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\DX">
+      <UniqueIdentifier>{f95ee9be-7a2c-4412-aa90-822e4bae48e4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Std\stdafx.h">
@@ -39,6 +42,9 @@
     <ClInclude Include="Source\DX\DXTestHelper.h">
       <Filter>ヘッダー ファイル\DX</Filter>
     </ClInclude>
+    <ClInclude Include="Source\DX\DXTestBase.h">
+      <Filter>ヘッダー ファイル\DX</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\System\WinMain.cpp">
@@ -46,6 +52,9 @@
     </ClCompile>
     <ClCompile Include="Source\System\WinApp.cpp">
       <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\DX\DXTestBase.cpp">
+      <Filter>ソース ファイル\DX</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
