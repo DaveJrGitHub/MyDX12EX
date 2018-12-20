@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../DX/DXTestBase.h"
+
 // ウィンドウズアプリケーションメイン
 class WinApp
 {
