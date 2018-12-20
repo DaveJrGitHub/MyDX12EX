@@ -142,11 +142,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\DX\D3D12Basic.cpp" />
     <ClCompile Include="Source\DX\DXTestBase.cpp" />
     <ClCompile Include="Source\System\WinApp.cpp" />
     <ClCompile Include="Source\System\WinMain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\DX\D3D12Basic.h" />
     <ClInclude Include="Source\DX\d3dx12.h" />
     <ClInclude Include="Source\DX\DXTestBase.h" />
     <ClInclude Include="Source\DX\DXTestHelper.h" />

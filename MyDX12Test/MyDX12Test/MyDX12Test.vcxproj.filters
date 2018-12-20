@@ -45,6 +45,9 @@
     <ClInclude Include="Source\DX\DXTestBase.h">
       <Filter>ヘッダー ファイル\DX</Filter>
     </ClInclude>
+    <ClInclude Include="Source\DX\D3D12Basic.h">
+      <Filter>ヘッダー ファイル\DX</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\System\WinMain.cpp">
@@ -54,6 +57,9 @@
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\DX\DXTestBase.cpp">
+      <Filter>ソース ファイル\DX</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\DX\D3D12Basic.cpp">
       <Filter>ソース ファイル\DX</Filter>
     </ClCompile>
   </ItemGroup>

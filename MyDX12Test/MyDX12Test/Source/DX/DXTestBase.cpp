@@ -15,6 +15,7 @@ DXTestBase::DXTestBase(UINT width, UINT height, std::wstring name) :
 	GetAssetsPath(assetsPath, _countof(assetsPath));
 	m_assetsPath = assetsPath;
 
+	// 画面のアスペクト比を事前計算
 	m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 }
 
