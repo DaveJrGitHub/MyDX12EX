@@ -9,6 +9,7 @@ D3D12Basic::D3D12Basic(UINT width, UINT height, std::wstring name):
 
 }
 
+// 初期化
 void D3D12Basic::OnInit()
 {
 	LoadPipeline();
@@ -16,7 +17,7 @@ void D3D12Basic::OnInit()
 }
 
 
-// Load the rendering pipeline dependencies.
+// レンダリングパイプラインの読み込み
 void D3D12Basic::LoadPipeline()
 {
 	UINT dxgiFactoryFlags = 0;
@@ -36,11 +37,16 @@ void D3D12Basic::LoadPipeline()
 	}
 #endif
 
+	// DirectXグラフィックインストラクチャー作成
+	// NOTE:DXGIはユーザーモードとカーネルモードのやり取りを仲介する役割を担う。
 	ComPtr<IDXGIFactory4> factory;
 	ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
 
 	if (m_useWarpDevice)
 	{
+		// Warpデバイス生成（Windows Advanced Rasterization Platform）
+		// NOTE:グラフィックハードウェアがDirect3Dの機能レベルを十分にサポートしない場合でもカジュアルな用途であれば実用に耐えるデバイス。
+
 		ComPtr<IDXGIAdapter> warpAdapter;
 		ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
 
@@ -52,6 +58,9 @@ void D3D12Basic::LoadPipeline()
 	}
 	else
 	{
+		// ハードウェアデバイス生成
+		// NOTE:Warpよりも高性能なデバイス
+
 		ComPtr<IDXGIAdapter1> hardwareAdapter;
 		GetHardwareAdapter(factory.Get(), &hardwareAdapter);
 
@@ -62,14 +71,14 @@ void D3D12Basic::LoadPipeline()
 		));
 	}
 
-	// Describe and create the command queue.
+	// コマンドキュー生成準備
 	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-
+	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;	// GPUタイムアウトが有効
+	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;	// 直接コマンドキュー
+	// コマンドキュー生成
 	ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
 
-	// Describe and create the swap chain.
+	// スワップチェイン生成準備
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 	swapChainDesc.BufferCount = FrameCount;
 	swapChainDesc.Width = m_width;
@@ -79,9 +88,10 @@ void D3D12Basic::LoadPipeline()
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.SampleDesc.Count = 1;
 
+	// スワップチェイン生成
 	ComPtr<IDXGISwapChain1> swapChain;
 	ThrowIfFailed(factory->CreateSwapChainForHwnd(
-		m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
+		m_commandQueue.Get(),        // 強制的にFlushする為にキューを必要とします。
 		WinApp::GetHwnd(),
 		&swapChainDesc,
 		nullptr,
@@ -89,41 +99,49 @@ void D3D12Basic::LoadPipeline()
 		&swapChain
 	));
 
-	// This sample does not support fullscreen transitions.
+	// Alt+Enterによるフルスクリーンを行わない
 	ThrowIfFailed(factory->MakeWindowAssociation(WinApp::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
 
 	ThrowIfFailed(swapChain.As(&m_swapChain));
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-	// Create descriptor heaps.
+	// DescriptorHeap生成
+	// NOTE:任意のバッファが何を示すものなのかを記述したデータがDescriptor。
+	//      DescriptorはDescriptorHeapと呼ばれるヒープにコピーしないと使用できない。
 	{
-		// Describe and create a render target view (RTV) descriptor heap.
+		// 生成するDiscripterHeapの設定。
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = FrameCount;
-		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		rtvHeapDesc.NumDescriptors = FrameCount;	// 値の中身は『2』フロントバッファとバックバッファ用。
+		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;	// RenderTargetViewの略称。RenderTargetViewとしてヒープを使う。
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		// DiscripterHeap生成
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
-
+		// RTV用のDescriptorのサイズを取得
 		m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	}
 
-	// Create frame resources.
+	// スワップチェインのバッファをDiscripterHeapに登録する。
 	{
+		// ヒープの先頭アドレスを取得
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
-		// Create a RTV for each frame.
+		// スワップチェインで用意したバッファ分回す。
 		for (UINT n = 0; n < FrameCount; n++)
 		{
+			// 
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+			// RTV生成
 			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+			// ヒープサイズ分アドレスをずらす。
 			rtvHandle.Offset(1, m_rtvDescriptorSize);
 		}
 	}
 
+	// コマンドアロケータ生成
 	ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
 }
 
-// Load the sample assets.
+// アセットの読み込み
 void D3D12Basic::LoadAssets()
 {
 	// Create the command list.

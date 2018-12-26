@@ -24,14 +24,13 @@ DXTestBase::~DXTestBase()
 
 }
 
-// Helper function for resolving the full path of assets.
+// アセットのフルパス取得用
 std::wstring DXTestBase::GetAssetFullPath(LPCWSTR assetName)
 {
 	return m_assetsPath + assetName;
 }
 
-// Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
-// If no such adapter can be found, *ppAdapter will be set to nullptr.
+// DX12が使用可能なハードウェアアダプターを取得する関数。
 _Use_decl_annotations_
 void DXTestBase::GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
 {
@@ -68,7 +67,7 @@ void DXTestBase::SetCustomWindowText(LPCWSTR text)
 	SetWindowText(WinApp::GetHwnd(), windowText.c_str());
 }
 
-// Helper function for parsing any supplied command line args.
+// コマンドライン引数をパースする関数
 _Use_decl_annotations_
 void DXTestBase::ParseCommandLineArgs(WCHAR* argv[], int argc)
 {
