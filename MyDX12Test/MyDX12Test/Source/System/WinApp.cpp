@@ -5,9 +5,10 @@ HWND WinApp::m_hwnd = nullptr;
 
 int WinApp::Run(DXTestBase* pSample, HINSTANCE hInstance, int nCmdShow)
 {
-	// コマンドライン引数取得
 	int argc;
+	// コマンドライン引数取得
 	LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+	// コマンドライン引数をパース
 	pSample->ParseCommandLineArgs(argv, argc);
 	LocalFree(argv);
 
@@ -34,7 +35,8 @@ int WinApp::Run(DXTestBase* pSample, HINSTANCE hInstance, int nCmdShow)
 
 	// ウィンドウサイズ設定
 	RECT windowRect = { 0, 0, static_cast<LONG>(pSample->GetWidth()), static_cast<LONG>(pSample->GetHeight()) };
-	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);	// ウィンドウの枠部分を考慮したサイズを計算
+	// ウィンドウの枠部分を考慮したサイズを計算
+	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);	
 
 	// ウィンドウの生成
 	m_hwnd = CreateWindow(
@@ -56,7 +58,7 @@ int WinApp::Run(DXTestBase* pSample, HINSTANCE hInstance, int nCmdShow)
 		return 0;
 	}
 
-	// Initialize the sample. OnInit is defined in each child-implementation of DXSample.
+	// DX初期化
 	pSample->OnInit();
 
 	// ウィンドウの表示
@@ -66,7 +68,7 @@ int WinApp::Run(DXTestBase* pSample, HINSTANCE hInstance, int nCmdShow)
 	MSG msg = {};
 	while (msg.message != WM_QUIT)
 	{
-		// Process any messages in the queue.
+		// メッセージキューの取得
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);
