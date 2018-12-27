@@ -144,14 +144,13 @@ void D3D12Basic::LoadPipeline()
 // アセットの読み込み
 void D3D12Basic::LoadAssets()
 {
-	// Create the command list.
+	// コマンドリストの生成
 	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 
-	// Command lists are created in the recording state, but there is nothing
-	// to record yet. The main loop expects it to be closed, so close it now.
+	// コマンドリストはレコード状態で生成作成されるので、使われるまでは事前に閉じておく
 	ThrowIfFailed(m_commandList->Close());
 
-	// Create synchronization objects.
+	// 同期をとる為のフェンスを生成する
 	{
 		ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
 		m_fenceValue = 1;
@@ -170,13 +169,13 @@ void D3D12Basic::OnUpdate()
 {
 }
 
-// Render the scene.
+// 描画シーン
 void D3D12Basic::OnRender()
 {
-	// Record all the commands we need to render the scene into the command list.
+	// シーンのレンダリングに必要な全てのコマンドをコマンドリストに記録
 	PopulateCommandList();
 
-	// Execute the command list.
+	// コマンドリストの実行
 	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
@@ -197,47 +196,54 @@ void D3D12Basic::OnDestroy()
 
 void D3D12Basic::PopulateCommandList()
 {
-	// Command list allocators can only be reset when the associated 
-	// command lists have finished execution on the GPU; apps should use 
-	// fences to determine GPU execution progress.
+	// コマンドリストアロケータは、関連するコマンドリストがGPUで実行を終了した時のみリセット可能。
+	// このため、フェンスを利用してGPU実行の進行状況を判断する必要がある。
 	ThrowIfFailed(m_commandAllocator->Reset());
 
-	// However, when ExecuteCommandList() is called on a particular command 
-	// list, that command list can then be reset at any time and must be before 
-	// re-recording.
+	// ただし、ExecuteCommandList()が特定のコマンドリストで呼び出されると、そのコマンドリストはいつでもリセットできます。
 	ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
 
-	// Indicate that the back buffer will be used as a render target.
+	// バックバッファがレンダーターゲットとして使用されるように指定してます。
+	// BeforeState:D3D12_RESOURCE_STATE_PRESENT -> AfterState:D3D12_RESOURCE_STATE_RENDER_TARGET
+	// 現ステートからレンダーステートへ描画
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
+	// DiscripterHeapの先頭アドレスを基準にDescriptorのサイズ分フレーム要素分ずらした位置のアドレスを取得
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
 
 	// Record commands.
-	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+	const float clearColor[] = { 1.0f, 0.2f, 0.4f, 1.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
-	// Indicate that the back buffer will now be used to present.
+	// バックバッファが表示に使用されることを示す。
+	// BeforeState:D3D12_RESOURCE_STATE_RENDER_TARGET -> AfterState:D3D12_RESOURCE_STATE_PRESENT
+	// レンダーステートから現ステートへ描画
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
+	// コマンドリストへの命令の登録が終わったので、閉じる
 	ThrowIfFailed(m_commandList->Close());
 }
 
+// 描画完了を待つ
 void D3D12Basic::WaitForPreviousFrame()
 {
+
 	// WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
 	// This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
 	// sample illustrates how to use fences for efficient resource usage and to
 	// maximize GPU utilization.
 
-	// Signal and increment the fence value.
+	// 現在のフェンスの値がコマンド終了後にフェンスに書き込まれるようにする。
 	const UINT64 fence = m_fenceValue;
 	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
 	m_fenceValue++;
 
-	// Wait until the previous frame is finished.
+	// 
 	if (m_fence->GetCompletedValue() < fence)
 	{
+		// このフェンスにおいて、fenceの値になったらイベントを発火させる
 		ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
+		// イベントが発火するのを待つ
 		WaitForSingleObject(m_fenceEvent, INFINITE);
 	}
 
