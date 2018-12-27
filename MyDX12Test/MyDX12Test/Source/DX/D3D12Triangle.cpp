@@ -169,9 +169,9 @@ void D3D12Triangle::LoadAssets()
 #endif
 
 	// ファイルからコンパイル：頂点シェーダー
-	ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
+	ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"TriangleShaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
 	// ファイルからコンパイル：ピクセルシェーダーシェーダー
-	ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+	ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"TriangleShaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
 
 	// 頂点入力レイアウト
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
