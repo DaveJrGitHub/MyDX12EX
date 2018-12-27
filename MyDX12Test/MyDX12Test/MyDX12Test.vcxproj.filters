@@ -82,8 +82,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Resources\Shader\shaders.hlsl">
+    <CustomBuild Include="Resources\Shader\TriangleShaders.hlsl">
       <Filter>Assets\Shader</Filter>
-    </FxCompile>
+    </CustomBuild>
   </ItemGroup>
 </Project>
