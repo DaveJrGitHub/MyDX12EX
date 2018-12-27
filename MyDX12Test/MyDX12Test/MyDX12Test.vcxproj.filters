@@ -28,6 +28,15 @@
     <Filter Include="ソース ファイル\DX">
       <UniqueIdentifier>{f95ee9be-7a2c-4412-aa90-822e4bae48e4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\Std">
+      <UniqueIdentifier>{788ccd51-3875-45c0-84de-fc0194dd720e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets">
+      <UniqueIdentifier>{35619492-f7a7-4019-b3dc-28970a98ea7a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Shader">
+      <UniqueIdentifier>{859f9a14-4c3e-480f-acc1-6a987d91ab1d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Std\stdafx.h">
@@ -48,6 +57,9 @@
     <ClInclude Include="Source\DX\D3D12Basic.h">
       <Filter>ヘッダー ファイル\DX</Filter>
     </ClInclude>
+    <ClInclude Include="Source\DX\D3D12Triangle.h">
+      <Filter>ヘッダー ファイル\DX</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\System\WinMain.cpp">
@@ -62,5 +74,16 @@
     <ClCompile Include="Source\DX\D3D12Basic.cpp">
       <Filter>ソース ファイル\DX</Filter>
     </ClCompile>
+    <ClCompile Include="Source\DX\D3D12Triangle.cpp">
+      <Filter>ソース ファイル\DX</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Std\stdafx.cpp">
+      <Filter>ソース ファイル\Std</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Resources\Shader\shaders.hlsl">
+      <Filter>Assets\Shader</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

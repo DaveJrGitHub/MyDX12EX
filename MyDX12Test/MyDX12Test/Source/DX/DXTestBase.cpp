@@ -1,6 +1,5 @@
 
 
-#include "../Std/stdafx.h"
 #include "DXTestBase.h"
 
 using namespace Microsoft::WRL;

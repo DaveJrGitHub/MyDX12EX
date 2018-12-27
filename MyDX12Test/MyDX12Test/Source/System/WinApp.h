@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Std/stdafx.h"
 #include "../DX/DXTestBase.h"
 
 class DXTestBase;
