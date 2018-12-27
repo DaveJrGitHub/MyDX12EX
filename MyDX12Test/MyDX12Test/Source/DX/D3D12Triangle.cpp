@@ -1,15 +1,19 @@
 
-#include "D3D12Basic.h"
+#include "D3D12Triangle.h"
 
 // コンストラクタ
-D3D12Basic::D3D12Basic(UINT width, UINT height, std::wstring name):
-	DXTestBase(width, height, name)
+D3D12Triangle::D3D12Triangle(UINT width, UINT height, std::wstring name):
+	DXTestBase(width, height, name),
+	m_frameIndex(0),
+	m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
+	m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
+	m_rtvDescriptorSize(0)
 {
 
 }
 
 // 初期化
-void D3D12Basic::OnInit()
+void D3D12Triangle::OnInit()
 {
 	LoadPipeline();
 	LoadAssets();
@@ -17,7 +21,7 @@ void D3D12Basic::OnInit()
 
 
 // レンダリングパイプラインの読み込み
-void D3D12Basic::LoadPipeline()
+void D3D12Triangle::LoadPipeline()
 {
 	UINT dxgiFactoryFlags = 0;
 
@@ -141,35 +145,118 @@ void D3D12Basic::LoadPipeline()
 }
 
 // アセットの読み込み
-void D3D12Basic::LoadAssets()
+void D3D12Triangle::LoadAssets()
 {
+	// 空のルートシグネチャ生成
+	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	ComPtr<ID3DBlob> signature;
+	ComPtr<ID3DBlob> error;
+	// RootSignatureを作成するのに必要なバッファを確保、Table情報をシリアライズ
+	ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+	// 上記で確保したバッファ(signature)を指定してRootSignatureを作成
+	ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+
+	ComPtr<ID3DBlob> vertexShader;	// 頂点シェーダー
+	ComPtr<ID3DBlob> pixelShader;	// ピクセルシェーダー
+
+#if defined(_DEBUG)
+	// Enable better shader debugging with the graphics debugging tools.
+	UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+	UINT compileFlags = 0;
+#endif
+
+	// ファイルからコンパイル：頂点シェーダー
+	ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
+	// ファイルからコンパイル：ピクセルシェーダーシェーダー
+	ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+
+	// 頂点入力レイアウト
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+
+	// Describe and create the graphics pipeline state object (PSO).
+	// グラフィックスパイプラインステートオブジェクト（PSO）の設定を生成
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+	psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };	// 頂点入力レイアウト
+	psoDesc.pRootSignature = m_rootSignature.Get();								// ルートシグネチャ
+	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());					// 頂点シェーダー
+	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());					// ピクセルシェーダー
+	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);			// ラスタライザーステート（頂点配列からなるポリゴンを 2D の平面に描画する方法の設定をつかさどる）
+	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);						// ブレンドステート（半透明とかの合成のやつ、ADD、ZERO、ONE等々）
+	psoDesc.DepthStencilState.DepthEnable = FALSE;								// 深度設定
+	psoDesc.DepthStencilState.StencilEnable = FALSE;							// ステンシル設定
+	psoDesc.SampleMask = UINT_MAX;
+	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;		// プリミティブ描画のトポロジー指定（ラインストリップとかトライアングルリストとか）
+	psoDesc.NumRenderTargets = 1;
+	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	psoDesc.SampleDesc.Count = 1;
+	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+
 	// コマンドリストの生成
 	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 
 	// コマンドリストはレコード状態で生成作成されるので、使われるまでは事前に閉じておく
 	ThrowIfFailed(m_commandList->Close());
 
-	// 同期をとる為のフェンスを生成する
+	// 頂点バッファ作成 ----------------------------------------------------------
+	// Define the geometry for a triangle.
+	Vertex triangleVertices[] =
 	{
-		ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-		m_fenceValue = 1;
+		{ { 0.0f, 0.25f * m_aspectRatio, 0.0f },{ 1.0f, 0.0f, 0.0f, 1.0f } },
+		{ { 0.25f, -0.25f * m_aspectRatio, 0.0f },{ 0.0f, 1.0f, 0.0f, 1.0f } },
+		{ { -0.25f, -0.25f * m_aspectRatio, 0.0f },{ 0.0f, 0.0f, 1.0f, 1.0f } }
+	};
 
-		// Create an event handle to use for frame synchronization.
-		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-		if (m_fenceEvent == nullptr)
-		{
-			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-		}
+	const UINT vertexBufferSize = sizeof(triangleVertices);
+
+	// 良く分からないけどコードを単純化する為に、非効率なことをしている模様。
+	ThrowIfFailed(m_device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_vertexBuffer)));
+
+	// 頂点バッファに三角形データをコピー
+	UINT8* pVertexDataBegin;
+	CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
+	ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+	memcpy(pVertexDataBegin, triangleVertices, sizeof(triangleVertices));
+	m_vertexBuffer->Unmap(0, nullptr);
+
+	// Initialize the vertex buffer view.
+	// 頂点バッファViewを初期化
+	m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+	m_vertexBufferView.StrideInBytes = sizeof(Vertex);
+	m_vertexBufferView.SizeInBytes = vertexBufferSize;
+
+
+	// 同期をとる為のフェンスを生成する
+	ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+	m_fenceValue = 1;
+
+	// Create an event handle to use for frame synchronization.
+	m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	if (m_fenceEvent == nullptr)
+	{
+		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 	}
 }
 
 // Update frame-based values.
-void D3D12Basic::OnUpdate()
+void D3D12Triangle::OnUpdate()
 {
 }
 
 // 描画シーン
-void D3D12Basic::OnRender()
+void D3D12Triangle::OnRender()
 {
 	// シーンのレンダリングに必要な全てのコマンドをコマンドリストに記録
 	PopulateCommandList();
@@ -184,7 +271,7 @@ void D3D12Basic::OnRender()
 	WaitForPreviousFrame();
 }
 
-void D3D12Basic::OnDestroy()
+void D3D12Triangle::OnDestroy()
 {
 	// Ensure that the GPU is no longer referencing resources that are about to be
 	// cleaned up by the destructor.
@@ -193,7 +280,7 @@ void D3D12Basic::OnDestroy()
 	CloseHandle(m_fenceEvent);
 }
 
-void D3D12Basic::PopulateCommandList()
+void D3D12Triangle::PopulateCommandList()
 {
 	// コマンドリストアロケータは、関連するコマンドリストがGPUで実行を終了した時のみリセット可能。
 	// このため、フェンスを利用してGPU実行の進行状況を判断する必要がある。
@@ -202,6 +289,11 @@ void D3D12Basic::PopulateCommandList()
 	// ただし、ExecuteCommandList()が特定のコマンドリストで呼び出されると、そのコマンドリストはいつでもリセットできます。
 	ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
 
+	// 必要な情報の設定
+	m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+	m_commandList->RSSetViewports(1, &m_viewport);
+	m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
 	// バックバッファがレンダーターゲットとして使用されるように指定してます。
 	// BeforeState:D3D12_RESOURCE_STATE_PRESENT -> AfterState:D3D12_RESOURCE_STATE_RENDER_TARGET
 	// 現ステートからレンダーステートへ描画
@@ -209,10 +301,15 @@ void D3D12Basic::PopulateCommandList()
 
 	// DiscripterHeapの先頭アドレスを基準にDescriptorのサイズ分フレーム要素分ずらした位置のアドレスを取得
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
-	// Record commands.
+	// 背景色設定
 	const float clearColor[] = { 1.0f, 0.2f, 0.4f, 1.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+	// 
+	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);	// トポロジー指定
+	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);				// 頂点バッファ指定
+	m_commandList->DrawInstanced(3, 1, 0, 0);	// インデックス指定をしないプリミティブ描画
 
 	// バックバッファが表示に使用されることを示す。
 	// BeforeState:D3D12_RESOURCE_STATE_RENDER_TARGET -> AfterState:D3D12_RESOURCE_STATE_PRESENT
@@ -224,7 +321,7 @@ void D3D12Basic::PopulateCommandList()
 }
 
 // 描画完了を待つ
-void D3D12Basic::WaitForPreviousFrame()
+void D3D12Triangle::WaitForPreviousFrame()
 {
 
 	// WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.

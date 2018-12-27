@@ -1,4 +1,3 @@
-#include "../Std/stdafx.h"
 #include "WinApp.h"
 
 HWND WinApp::m_hwnd = nullptr;
